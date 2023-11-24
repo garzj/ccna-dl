@@ -1,0 +1,52 @@
+{
+  "name": "ccna-dl",
+  "version": "0.1.0",
+  "description": "A downloader for https://netacad.com/.",
+  "scripts": {
+    "build": "rimraf lib/ && npx tsc -p .",
+    "start": "node ./lib/cli.js",
+    "deploy": "npm run build && npm start",
+    "dev": "export NODE_ENV=development || set NODE_ENV=development&& npx ts-node-dev --respawn ./src/cli.ts",
+    "prepack": "npm run build",
+    "upgrade": "npx ncu -ux @types/inquirer inquirer"
+  },
+  "author": "Johannes Garz <johannes@garz.dev> (https://garz.dev/)",
+  "license": "GPL-3.0",
+  "bin": {
+    "ccna-dl": "lib/cli.js"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.11.5",
+    "@types/inquirer": "^8.2.2",
+    "@types/node": "^18.14.6",
+    "npm-check-updates": "^16.7.10",
+    "rimraf": "^5.0.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "cli-progress": "^3.12.0",
+    "cmd-ts": "^0.12.1",
+    "dotenv": "^16.0.3",
+    "inquirer": "^8.2.2",
+    "muhammara": "^3.8.0",
+    "puppeteer": "^19.7.3"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garzj/ccna-dl.git"
+  },
+  "keywords": [
+    "cisco",
+    "ccna",
+    "pdf",
+    "download"
+  ],
+  "bugs": {
+    "url": "https://github.com/garzj/ccna-dl/issues"
+  },
+  "homepage": "https://github.com/garzj/ccna-dl#readme"
+}
