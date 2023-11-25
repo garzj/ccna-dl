@@ -34,7 +34,7 @@ function urlToChapter(url: string) {
 }
 
 const cmd = command({
-  name: 'ddnadown',
+  name: 'ccna-dl',
   description:
     'CCNA Downloader\n' +
     '> Downloads courses from https://netacad.com/' +
