@@ -158,6 +158,7 @@ const cmd = command({
           await page.goto(contentPage, { waitUntil: 'networkidle2' });
 
           await page.waitForSelector('a.navlink.chunklink');
+          await page.$eval('a.navlink.chunklink', (link) => link.click()); // weird fix, the links were wrong until clicked
           urls = await page.$$eval('a.navlink.chunklink', (links) =>
             links.map((link) => link.href)
           );
