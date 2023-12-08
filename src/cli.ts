@@ -245,6 +245,7 @@ const cmd = command({
           cliProgress.Presets.shades_classic
         );
         bar.start(urls.length, 0);
+        const barUpdater = setInterval(() => bar.updateETA(), 1000);
 
         await promisePool(
           async (i) => {
@@ -282,6 +283,7 @@ const cmd = command({
         );
 
         // stop progress
+        clearInterval(barUpdater);
         bar.stop();
 
         // merge pdfs
