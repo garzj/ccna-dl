@@ -24,6 +24,7 @@ import * as inquirer from 'inquirer';
 import { hasOwnProperty } from './util/object';
 import { expandCarousels } from './expand-carousels';
 import { waitForSpinners } from './wait-for-spinners';
+import sanitize = require('sanitize-filename');
 
 const { version } = JSON.parse(
   readFileSync(join(__dirname, '../package.json')).toString()
@@ -129,6 +130,7 @@ const cmd = command({
         const page = await browser.newPage();
 
         let urls: string[];
+        let courseTitle: string;
         try {
           await page.goto(url, { waitUntil: 'networkidle2' });
           await waitForSpinners(page);
@@ -221,6 +223,11 @@ const cmd = command({
             /^[0-9]+\.[0-9]+\.1$/.test(urlToChapter(url))
           );
 
+          // get course title
+          courseTitle =
+            (await page.$eval('.page-title', (title) => title.textContent)) ??
+            'Unknown';
+
           // hide sidebar
           const sidebarVisible = !!(await page.$('.sidebar.isVisible'));
           if (sidebarVisible) {
@@ -298,7 +305,10 @@ const cmd = command({
         // merge pdfs
         console.log('Merging pdfs.');
 
-        const mergedPdf = join(args.outDir, `${courseId}.pdf`);
+        const mergedPdf = join(
+          args.outDir,
+          `${courseId}_${sanitize(courseTitle)}.pdf`
+        );
         const writeStream = new muhammara.PDFWStreamForFile(mergedPdf);
         const writer = muhammara.createWriter(writeStream);
         for (const outFile of outFiles) {
