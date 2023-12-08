@@ -6,7 +6,7 @@
     "build": "rimraf lib/ && npx tsc -p .",
     "start": "node ./lib/cli.js",
     "deploy": "npm run build && npm start",
-    "dev": "export NODE_ENV=development || set NODE_ENV=development&& npx ts-node-dev --respawn ./src/cli.ts",
+    "dev": "export NODE_ENV=development || set NODE_ENV=development&& npx ts-node-dev --inspect=9229 --respawn ./src/cli.ts",
     "prepack": "npm run build",
     "upgrade": "npx ncu -ux @types/inquirer inquirer"
   },

@@ -276,6 +276,7 @@ const cmd = command({
 
               const chapter = urlToChapter(chapterUrl).replace(/\.1$/, '');
               const outFile = join(saveDir, `${chapter}.pdf`);
+              // await page.emulateMediaType('screen');
               const buf = await page.pdf({
                 format: (args.format as PaperFormat | undefined) ?? 'a4',
                 landscape: false,
