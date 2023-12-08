@@ -5,7 +5,7 @@ A simple tool for downloading your CCNA course from the website.
 ## Features
 
 - download the whole course contents
-- does _not_ work for carousels hiding content
+- clicks through carousels and stacks their contents
 - does _not_ work for videos
 
 ## Run this tool
