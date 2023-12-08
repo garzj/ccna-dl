@@ -22,6 +22,7 @@ export async function expandCarousels(page: Page) {
       if (!contentWrapper) {
         throw `No content wrapper found for mbar: ${id}`;
       }
+      await page.waitForNetworkIdle();
       await waitForSpinners(contentWrapper);
     };
 
