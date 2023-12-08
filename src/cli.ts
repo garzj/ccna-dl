@@ -13,15 +13,16 @@ import {
 } from 'cmd-ts';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import puppeteer, { PaperFormat, TimeoutError } from 'puppeteer';
+import puppeteer, { HTTPResponse, PaperFormat, Target } from 'puppeteer';
 // @ts-ignore
 import { _paperFormats as paperFormats } from 'puppeteer-core';
-import { promisePool } from './util/promise';
+import { catchedRace, delay, promisePool } from './util/promise';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import * as muhammara from 'muhammara';
 import * as cliProgress from 'cli-progress';
 import * as inquirer from 'inquirer';
 import { hasOwnProperty } from './util/object';
+import { waitForSpinners } from './wait-for-spinners';
 
 const { version } = JSON.parse(
   readFileSync(join(__dirname, '../package.json')).toString()
@@ -123,6 +124,7 @@ const cmd = command({
         let urls: string[];
         try {
           await page.goto(url, { waitUntil: 'networkidle2' });
+          await waitForSpinners(page);
 
           // login
           console.log('Loggin in.');
@@ -132,14 +134,60 @@ const cmd = command({
           await userElm.type(args.user);
 
           const nextBtn = await page.$('#idp-discovery-submit');
-          if (nextBtn) {
-            nextBtn.click();
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
+          if (!nextBtn) {
+            throw 'No next button found.';
           }
+
+          // navigation
+          const waitForNav = () =>
+            page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+          // cookie banner
+          const waitForCookies = () =>
+            page.waitForSelector(
+              '.save-preference-btn-handler.onetrust-close-btn-handler',
+              { visible: true, hidden: false }
+            );
+
+          // https://www.cisco.com/c/en/us/about/legal/privacy-full.html page
+          const waitForPrivacyPage = () =>
+            browser.waitForTarget((target) =>
+              target.url().includes('about/legal/privacy-full.html')
+            );
+
+          // handle multiple scenarios
+          nextBtn.click();
+          let nextThing = await catchedRace([
+            waitForNav(),
+            waitForCookies(),
+            waitForPrivacyPage(),
+          ]);
+          // privacy page
+          if (nextThing instanceof Target) {
+            const page = await nextThing.page();
+            page && (await page.close());
+
+            nextBtn.click();
+            nextThing = await catchedRace([waitForNav(), waitForCookies()]);
+          }
+
+          // cookie banner
+          if (!(nextThing instanceof HTTPResponse)) {
+            const savePrefsBtn = nextThing;
+            if (savePrefsBtn) {
+              await savePrefsBtn.click();
+              await delay(1000);
+
+              nextBtn.click();
+              await waitForNav();
+            }
+          }
+
+          await delay(2000);
+          await waitForSpinners(page);
 
           const pwElm = await page.$('input[name="password"]');
           if (!pwElm) throw 'Password input not found.';
-          // await pwElm.type(password);
           await pwElm.type(password);
 
           const submitBtn = await page.$('#okta-signin-submit');
@@ -173,6 +221,9 @@ const cmd = command({
             if (!toggleBtn) throw 'No button element to hide sidebar found.';
             await toggleBtn.click();
           }
+        } catch (e) {
+          console.error('Error:', e);
+          return;
         } finally {
           await page.close();
         }
@@ -204,16 +255,7 @@ const cmd = command({
               await page.goto(chapterUrl, { waitUntil: 'networkidle2' });
 
               await page.waitForSelector('.content-chunks');
-              try {
-                await page.waitForFunction(
-                  () => !document.querySelector('.loading-spinner'),
-                  { timeout: 10000 }
-                );
-              } catch (e) {
-                if (!(e instanceof TimeoutError)) {
-                  throw e;
-                }
-              }
+              await waitForSpinners(page);
 
               const chapter = urlToChapter(chapterUrl).replace(/\.1$/, '');
               const outFile = join(saveDir, `${chapter}.pdf`);
