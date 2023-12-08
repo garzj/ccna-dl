@@ -22,6 +22,7 @@ import * as muhammara from 'muhammara';
 import * as cliProgress from 'cli-progress';
 import * as inquirer from 'inquirer';
 import { hasOwnProperty } from './util/object';
+import { expandCarousels } from './expand-carousels';
 import { waitForSpinners } from './wait-for-spinners';
 
 const { version } = JSON.parse(
@@ -116,6 +117,11 @@ const cmd = command({
 
     const browser = await puppeteer.launch({
       headless: 'new',
+      args: [
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+      ],
     });
     try {
       for (const url of args.urls) {
@@ -257,6 +263,8 @@ const cmd = command({
 
               await page.waitForSelector('.content-chunks');
               await waitForSpinners(page);
+
+              await expandCarousels(page);
 
               const chapter = urlToChapter(chapterUrl).replace(/\.1$/, '');
               const outFile = join(saveDir, `${chapter}.pdf`);
