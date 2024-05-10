@@ -28,6 +28,7 @@ import sanitize = require('sanitize-filename');
 import { login } from './login';
 import { getChapterUrls } from './get-chapters';
 import { urlToChapter as urlToChapterId } from './url-to-chapter-id';
+import { solveQuizzes } from './solve-quizzes';
 
 const { version } = JSON.parse(
   readFileSync(join(__dirname, '../package.json')).toString()
@@ -192,6 +193,7 @@ const cmd = command({
               await waitForSpinners(page);
 
               await expandCarousels(page);
+              await solveQuizzes(page);
 
               const chapter = urlToChapterId(chapterUrl).replace(/\.1$/, '');
               const outFile = join(saveDir, `${chapter}.pdf`);

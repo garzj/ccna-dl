@@ -1,9 +1,6 @@
 import { ElementHandle, Page } from 'puppeteer';
 import { waitForSpinners } from './wait-for-spinners';
-
-async function clickInBackground(handle: ElementHandle<HTMLButtonElement>) {
-  await handle.evaluate((elm) => elm.click());
-}
+import { clickInBackground } from './click-in-bg';
 
 export async function expandCarousels(page: Page) {
   const mbars = await page.$$(
