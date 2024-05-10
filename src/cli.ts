@@ -13,10 +13,10 @@ import {
 } from 'cmd-ts';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import puppeteer, { HTTPResponse, PaperFormat, Target } from 'puppeteer';
+import puppeteer, { PaperFormat } from 'puppeteer';
 // @ts-ignore
 import { _paperFormats as paperFormats } from 'puppeteer-core';
-import { catchedRace, delay, promisePool } from './util/promise';
+import { promisePool } from './util/promise';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import * as muhammara from 'muhammara';
 import * as cliProgress from 'cli-progress';
@@ -25,16 +25,13 @@ import { hasOwnProperty } from './util/object';
 import { expandCarousels } from './expand-carousels';
 import { waitForSpinners } from './wait-for-spinners';
 import sanitize = require('sanitize-filename');
+import { login } from './login';
+import { getChapterUrls } from './get-chapters';
+import { urlToChapter as urlToChapterId } from './url-to-chapter-id';
 
 const { version } = JSON.parse(
   readFileSync(join(__dirname, '../package.json')).toString()
 );
-
-function urlToChapter(url: string) {
-  const chapter = url.match(/[0-9]+\.[0-9]+\.[0-9]+/)?.at(0);
-  if (!chapter) throw `Could not determine chapter from url: ${url}`;
-  return chapter;
-}
 
 const cmd = command({
   name: 'ccna-dl',
@@ -138,90 +135,12 @@ const cmd = command({
           // login
           console.log('Loggin in.');
 
-          const userElm = await page.$('input[name="username"]');
-          if (!userElm) throw 'Username input not found.';
-          await userElm.type(args.user);
-
-          const nextBtn = await page.$('#idp-discovery-submit');
-          if (!nextBtn) {
-            throw 'No next button found.';
-          }
-
-          // navigation
-          const waitForNav = () =>
-            page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-          // cookie banner
-          const waitForCookies = () =>
-            page.waitForSelector(
-              '.save-preference-btn-handler.onetrust-close-btn-handler',
-              { visible: true, hidden: false }
-            );
-
-          // https://www.cisco.com/c/en/us/about/legal/privacy-full.html page
-          const waitForPrivacyPage = () =>
-            browser.waitForTarget((target) =>
-              target.url().includes('about/legal/privacy-full.html')
-            );
-
-          // handle multiple scenarios
-          nextBtn.click();
-          let nextThing = await catchedRace([
-            waitForNav(),
-            waitForCookies(),
-            waitForPrivacyPage(),
-          ]);
-          // privacy page
-          if (nextThing instanceof Target) {
-            const page = await nextThing.page();
-            page && (await page.close());
-
-            nextBtn.click();
-            nextThing = await catchedRace([waitForNav(), waitForCookies()]);
-          }
-
-          // cookie banner
-          if (!(nextThing instanceof HTTPResponse)) {
-            const savePrefsBtn = nextThing;
-            if (savePrefsBtn) {
-              await savePrefsBtn.click();
-              await delay(1000);
-
-              nextBtn.click();
-              await waitForNav();
-            }
-          }
-
-          await delay(2000);
-          await waitForSpinners(page);
-
-          const pwElm = await page.$('input[name="password"]');
-          if (!pwElm) throw 'Password input not found.';
-          await pwElm.type(password);
-
-          const submitBtn = await page.$('#okta-signin-submit');
-          if (!submitBtn) throw 'Login submit button not found.';
-          submitBtn.click();
+          await login(page, args.user, password);
 
           // get all chapters
           console.log('Collecting course chapters.');
 
-          await page.waitForNavigation({ waitUntil: 'networkidle2' });
-          await page.waitForSelector('iframe#contentframe');
-          const contentPage = await page.$eval(
-            'iframe#contentframe',
-            (iframe) => iframe.src
-          );
-          await page.goto(contentPage, { waitUntil: 'networkidle2' });
-
-          await page.waitForSelector('a.navlink.chunklink');
-          await page.$eval('a.navlink.chunklink', (link) => link.click()); // weird fix, the links were wrong until clicked
-          urls = await page.$$eval('a.navlink.chunklink', (links) =>
-            links.map((link) => link.href)
-          );
-          urls = urls.filter((url) =>
-            /^[0-9]+\.[0-9]+\.1$/.test(urlToChapter(url))
-          );
+          urls = await getChapterUrls(page);
 
           // get course title
           courseTitle =
@@ -274,7 +193,7 @@ const cmd = command({
 
               await expandCarousels(page);
 
-              const chapter = urlToChapter(chapterUrl).replace(/\.1$/, '');
+              const chapter = urlToChapterId(chapterUrl).replace(/\.1$/, '');
               const outFile = join(saveDir, `${chapter}.pdf`);
               // await page.emulateMediaType('screen');
               const buf = await page.pdf({
