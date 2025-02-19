@@ -2,6 +2,10 @@
 
 A simple tool for downloading your CCNA course from the website.
 
+## OUT OF DATE
+
+This downloader seems to be broken by now ([#1](/../../issues/1)). I won't fix it, but would accept PRs or transfer the npm package.
+
 ## Features
 
 - download the whole course contents
